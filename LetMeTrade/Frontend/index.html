@@ -1,0 +1,240 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="stock-dashboard">
+    <div class="dashboard-header">
+        <h1>Stock Market Dashboard</h1>
+        <form method="get" class="filter-form">
+            <div class="select-wrapper">
+                <select name="filter" class="stock-filter">
+                    <option value="">All Stocks</option>
+                    <option {% if request.query_params.filter == 'new_closing_highs' %}selected{% endif %}
+                        value="new_closing_highs">New Closing Highs</option>
+                    <option {% if request.query_params.filter == 'new_closing_lows' %}selected{% endif %}
+                        value="new_closing_lows">New Closing Lows</option>
+                    <option {% if request.query_params.filter == 'rsi_overbought' %}selected{% endif %}
+                        value="rsi_overbought">RSI Overbought</option>
+                    <option {% if request.query_params.filter == 'rsi_oversold' %}selected{% endif %}
+                        value="rsi_oversold">RSI Oversold</option>
+                    <option {% if request.query_params.filter == 'above_sma_20' %}selected{% endif %}
+                        value="above_sma_20">Above 20 SMA</option>
+                    <option {% if request.query_params.filter == 'below_sma_20' %}selected{% endif %}
+                        value="below_sma_20">Below 20 SMA</option>
+                    <option {% if request.query_params.filter == 'above_sma_50' %}selected{% endif %}
+                        value="above_sma_50">Above 50 SMA</option>
+                    <option {% if request.query_params.filter == 'below_sma_50' %}selected{% endif %}
+                        value="below_sma_50">Below 50 SMA</option>
+                </select>
+            </div>
+            <button type="submit" class="filter-submit">Apply Filter</button>
+        </form>
+    </div>
+    <div class="search-container">
+        <input type="text" id="stock-search" class="search-input" placeholder="Search Stocks...">
+    </div>
+    <div class="stock-grid">
+        {% for stock in stocks %}
+        <div class="stock-card" data-symbol="{{ stock.symbol }}" data-name="{{ stock.name }}">
+            <div class="stock-header">
+                <h3>{{ stock.symbol }}</h3>
+                <span class="stock-name">{{ stock.name }}</span>
+            </div>
+            {% if indicator_values[stock.symbol] %}
+            <div class="stock-details">
+                <div class="stock-metric">
+                    <span class="metric-label">Price</span>
+                    <span class="metric-value
+                        {% if indicator_values[stock.symbol].close > indicator_values[stock.symbol].sma_20 %}
+                            positive
+                        {% else %}
+                            negative
+                        {% endif %}">
+                        ${{ indicator_values[stock.symbol].close|round(2) }}
+                    </span>
+                </div>
+                <div class="stock-metric">
+                    <span class="metric-label">RSI (14)</span>
+                    <span class="metric-value
+                        {% if indicator_values[stock.symbol].rsi_14 > 70 %}
+                            negative
+                        {% elif indicator_values[stock.symbol].rsi_14 < 30 %}
+                            warning
+                        {% else %}
+                            neutral
+                        {% endif %}">
+                        {{ indicator_values[stock.symbol].rsi_14|round(2) }}
+                    </span>
+                </div>
+                <div class="stock-metric">
+                    <span class="metric-label">20 SMA</span>
+                    <span class="metric-value">
+                        {{ indicator_values[stock.symbol].sma_20|round(2) }}
+                    </span>
+                </div>
+                <div class="stock-metric">
+                    <span class="metric-label">50 SMA</span>
+                    <span class="metric-value">
+                        {{ indicator_values[stock.symbol].sma_50|round(2) }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+            <a href="/stock/{{ stock.symbol }}" class="stock-details-link">View Details</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('stock-search');
+        const stockCards = document.querySelectorAll('.stock-card');
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            stockCards.forEach(card => {
+                const symbol = card.dataset.symbol.toLowerCase();
+                const name = card.dataset.name.toLowerCase();
+
+                if (symbol.includes(searchTerm) || name.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .search-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .search-input {
+        padding: 10px;
+        width: 300px;
+        border: 1px solid #3498db;
+        border-radius: 6px;
+        font-size: 16px;
+    }
+
+    .stock-dashboard {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e6e9f0 100%);
+        padding: 20px;
+        border-radius: 12px;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .filter-form {
+        display: flex;
+        align-items: center;
+    }
+
+    .select-wrapper {
+        margin-right: 10px;
+    }
+
+    .stock-filter {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #3498db;
+    }
+
+    .filter-submit {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .filter-submit:hover {
+        background-color: #2980b9;
+    }
+
+    .stock-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .stock-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        transition: transform 0.3s;
+    }
+
+    .stock-card:hover {
+        transform: scale(1.03);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .stock-header {
+        border-bottom: 1px solid #ecf0f1;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+
+    .stock-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .stock-metric {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #f8f9fa;
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    .metric-label {
+        color: #7f8c8d;
+        font-size: 0.8em;
+        margin-bottom: 5px;
+    }
+
+    .metric-value {
+        font-weight: bold;
+    }
+
+    .positive {
+        color: #2ecc71;
+    }
+
+    .negative {
+        color: #e74c3c;
+    }
+
+    .warning {
+        color: #f39c12;
+    }
+
+    .neutral {
+        color: #3498db;
+    }
+
+    .stock-details-link {
+        display: block;
+        text-align: center;
+        margin-top: 10px;
+        color: #3498db;
+        text-decoration: none;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
